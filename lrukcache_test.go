@@ -1,8 +1,10 @@
 package hcache
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -43,4 +45,21 @@ func TestLRU2_Cache(t *testing.T) {
 	cache.Put(strconv.FormatInt(12, 10), 12)
 	assert.Equal(t, 6, cache.head.Value)
 	assert.Equal(t, 1, cache.tail.Value)
+}
+
+func BenchmarkLRUKCache(b *testing.B) {
+	cacheqCapacity := uint64(1000)
+	historyqCapacity := uint64(1000)
+	condition := uint64(10)
+	cache := newLRUKCache[uint64, string](cacheqCapacity, historyqCapacity, condition)
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			key := uint64(time.Now().UnixNano())
+			value := fmt.Sprintf("value-%d", key)
+			cache.Put(key, value)
+			cache.Get(key)
+		}
+	})
 }
