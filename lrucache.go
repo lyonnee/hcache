@@ -2,7 +2,6 @@ package hcache
 
 import (
 	"sync"
-	"sync/atomic"
 )
 
 type Keypair[K comparable, V any] struct {
@@ -13,16 +12,16 @@ type Keypair[K comparable, V any] struct {
 }
 
 type LRUCache[K comparable, V any] struct {
-	cacheq   map[K]*Keypair[K, V]
-	cap      uint64
-	len      atomic.Uint64
-	head     *Keypair[K, V]
-	headlock sync.Mutex
-	tail     *Keypair[K, V]
+	cacheq sync.Map
+	cap    uint64
+	len    uint64
+	head   *Keypair[K, V]
+	tail   *Keypair[K, V]
 }
 
 func (lc *LRUCache[K, V]) Get(key K) V {
-	n, ok := lc.cacheq[key]
+	v, ok := lc.cacheq.Load(key)
+	n := v.(*Keypair[K, V])
 	if !ok {
 		var res V
 		return res
@@ -33,19 +32,21 @@ func (lc *LRUCache[K, V]) Get(key K) V {
 }
 
 func (lc *LRUCache[K, V]) Put(key K, value V) error {
-	n, ok := lc.cacheq[key]
+	v, ok := lc.cacheq.Load(key)
+	var n *Keypair[K, V]
 	if !ok {
 		n = &Keypair[K, V]{
 			Key:   key,
 			Value: value,
 		}
 		// 内存已满
-		if lc.len.Load() == lc.cap {
+		if lc.len == lc.cap {
 			lc.deleteTail()
 		}
-		lc.cacheq[key] = n
-		lc.len.Add(1)
+		lc.cacheq.Store(key, n)
+		lc.len++
 	} else {
+		n = v.(*Keypair[K, V])
 		n.Value = value
 	}
 
@@ -54,8 +55,6 @@ func (lc *LRUCache[K, V]) Put(key K, value V) error {
 }
 
 func (lc *LRUCache[K, V]) toHeadNode(n *Keypair[K, V]) {
-	lc.headlock.Lock()
-	defer lc.headlock.Unlock()
 	if lc.head == nil {
 		lc.head = n
 		lc.tail = n
@@ -83,13 +82,13 @@ func (lc *LRUCache[K, V]) deleteTail() {
 	n.prev.next = nil
 	lc.tail = n.prev
 
-	delete(lc.cacheq, n.Key)
-	lc.len.Store(lc.len.Load() - 1)
+	lc.cacheq.Delete(n.Key)
+	lc.len--
 }
 
 func newLRUCache[K comparable, V any](cap uint64) *LRUCache[K, V] {
 	return &LRUCache[K, V]{
 		cap:    cap,
-		cacheq: make(map[K]*Keypair[K, V], cap),
+		cacheq: sync.Map{},
 	}
 }
