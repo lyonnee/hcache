@@ -28,7 +28,7 @@ func (lc *LRUKCache[K, V]) Get(key K) V {
 	var n *LRUKKeypair[K, V]
 	if ok {
 		n = v.(*LRUKKeypair[K, V])
-		lc.toHeadNode(n)
+		lc.toHead(n)
 		return n.Value
 	}
 
@@ -71,7 +71,7 @@ func (lc *LRUKCache[K, V]) Put(key K, value V) error {
 		return nil
 	}
 
-	lc.toHeadNode(n)
+	lc.toHead(n)
 	return nil
 }
 
@@ -88,11 +88,19 @@ func (lc *LRUKCache[K, V]) moveNodeFromHistoryqToCacheq(n *LRUKKeypair[K, V]) {
 		lc.cacheq.Store(n.Key, n)
 		lc.len++
 
-		lc.toHeadNode(n)
+		lc.toHead(n)
 	}
 }
 
-func (lc *LRUKCache[K, V]) toHeadNode(n *LRUKKeypair[K, V]) {
+func (lc *LRUKCache[K, V]) Cap() uint64 {
+	return lc.cap
+}
+
+func (lc *LRUKCache[K, V]) Len() uint64 {
+	return lc.len
+}
+
+func (lc *LRUKCache[K, V]) toHead(n *LRUKKeypair[K, V]) {
 	if lc.head == nil {
 		lc.head = n
 		lc.tail = n

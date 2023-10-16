@@ -27,7 +27,7 @@ func (lc *LRUCache[K, V]) Get(key K) V {
 		return res
 	}
 
-	lc.toHeadNode(n)
+	lc.toHead(n)
 	return n.Value
 }
 
@@ -50,11 +50,19 @@ func (lc *LRUCache[K, V]) Put(key K, value V) error {
 		n.Value = value
 	}
 
-	lc.toHeadNode(n)
+	lc.toHead(n)
 	return nil
 }
 
-func (lc *LRUCache[K, V]) toHeadNode(n *Keypair[K, V]) {
+func (lc *LRUCache[K, V]) Cap() uint64 {
+	return lc.cap
+}
+
+func (lc *LRUCache[K, V]) Len() uint64 {
+	return lc.len
+}
+
+func (lc *LRUCache[K, V]) toHead(n *Keypair[K, V]) {
 	if lc.head == nil {
 		lc.head = n
 		lc.tail = n

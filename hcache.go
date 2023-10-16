@@ -3,6 +3,8 @@ package hcache
 type HCache[K comparable, V any] interface {
 	Get(key K) V
 	Put(key K, value V) error
+	Cap() uint64
+	Len() uint64
 }
 
 type Options struct {
