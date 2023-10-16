@@ -1,8 +1,8 @@
 package hcache
 
-type HCache[T any] interface {
-	Get(key string) T
-	Put(key string, value T) error
+type HCache[K comparable, V any] interface {
+	Get(key K) V
+	Put(key K, value V) error
 }
 
 type Options struct {
@@ -11,13 +11,13 @@ type Options struct {
 	Condition   uint64
 }
 
-func New[T any](opts *Options) HCache[T] {
+func New[K comparable, V any](opts *Options) HCache[K, V] {
 	if opts.Condition > 1 {
 		if opts.HistoryqCap == 0 {
 			opts.HistoryqCap = opts.CacheqCap
 		}
-		return newLRUKCache[T](opts.CacheqCap, opts.HistoryqCap, opts.Condition)
+		return newLRUKCache[K, V](opts.CacheqCap, opts.HistoryqCap, opts.Condition)
 	}
 
-	return newLRUCache[T](opts.CacheqCap)
+	return newLRUCache[K, V](opts.CacheqCap)
 }

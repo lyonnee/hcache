@@ -8,7 +8,7 @@ import (
 )
 
 func TestLRU1_Cache(t *testing.T) {
-	cache := newLRUKCache[int](10, 1, 10)
+	cache := newLRUKCache[string, int](10, 1, 1)
 	for i := 1; i <= 10; i++ {
 		cache.Put(strconv.FormatInt(int64(i), 10), i)
 	}
@@ -25,7 +25,7 @@ func TestLRU1_Cache(t *testing.T) {
 }
 
 func TestLRU2_Cache(t *testing.T) {
-	cache := newLRUKCache[int](10, 2, 10)
+	cache := newLRUKCache[string, int](10, 10, 2)
 	for i := 1; i <= 10; i++ {
 		cache.Put(strconv.FormatInt(int64(i), 10), i)
 	}

@@ -8,7 +8,7 @@ import (
 )
 
 func TestLRUCache(t *testing.T) {
-	cache := newLRUCache[int](10)
+	cache := newLRUCache[string, int](10)
 	for i := 1; i <= 10; i++ {
 		cache.Put(strconv.FormatInt(int64(i), 10), i)
 	}

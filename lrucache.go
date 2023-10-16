@@ -5,26 +5,26 @@ import (
 	"sync/atomic"
 )
 
-type Keypair[T any] struct {
-	Key   string
-	Value T
-	prev  *Keypair[T]
-	next  *Keypair[T]
+type Keypair[K comparable, V any] struct {
+	Key   K
+	Value V
+	prev  *Keypair[K, V]
+	next  *Keypair[K, V]
 }
 
-type LRUCache[T any] struct {
-	cacheq   map[string]*Keypair[T]
+type LRUCache[K comparable, V any] struct {
+	cacheq   map[K]*Keypair[K, V]
 	cap      uint64
 	len      atomic.Uint64
-	head     *Keypair[T]
+	head     *Keypair[K, V]
 	headlock sync.Mutex
-	tail     *Keypair[T]
+	tail     *Keypair[K, V]
 }
 
-func (lc *LRUCache[T]) Get(key string) T {
+func (lc *LRUCache[K, V]) Get(key K) V {
 	n, ok := lc.cacheq[key]
 	if !ok {
-		var res T
+		var res V
 		return res
 	}
 
@@ -32,10 +32,10 @@ func (lc *LRUCache[T]) Get(key string) T {
 	return n.Value
 }
 
-func (lc *LRUCache[T]) Put(key string, value T) error {
+func (lc *LRUCache[K, V]) Put(key K, value V) error {
 	n, ok := lc.cacheq[key]
 	if !ok {
-		n = &Keypair[T]{
+		n = &Keypair[K, V]{
 			Key:   key,
 			Value: value,
 		}
@@ -53,7 +53,7 @@ func (lc *LRUCache[T]) Put(key string, value T) error {
 	return nil
 }
 
-func (lc *LRUCache[T]) toHeadNode(n *Keypair[T]) {
+func (lc *LRUCache[K, V]) toHeadNode(n *Keypair[K, V]) {
 	lc.headlock.Lock()
 	defer lc.headlock.Unlock()
 	if lc.head == nil {
@@ -77,7 +77,7 @@ func (lc *LRUCache[T]) toHeadNode(n *Keypair[T]) {
 	lc.head = n
 }
 
-func (lc *LRUCache[T]) deleteTail() {
+func (lc *LRUCache[K, V]) deleteTail() {
 	n := lc.tail
 
 	n.prev.next = nil
@@ -87,9 +87,9 @@ func (lc *LRUCache[T]) deleteTail() {
 	lc.len.Store(lc.len.Load() - 1)
 }
 
-func newLRUCache[T any](cap uint64) *LRUCache[T] {
-	return &LRUCache[T]{
+func newLRUCache[K comparable, V any](cap uint64) *LRUCache[K, V] {
+	return &LRUCache[K, V]{
 		cap:    cap,
-		cacheq: make(map[string]*Keypair[T], cap),
+		cacheq: make(map[K]*Keypair[K, V], cap),
 	}
 }

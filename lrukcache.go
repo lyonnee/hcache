@@ -5,26 +5,26 @@ import (
 	"sync/atomic"
 )
 
-type LRUKKeypair[T any] struct {
-	Key    string
-	Value  T
+type LRUKKeypair[K comparable, V any] struct {
+	Key    K
+	Value  V
 	visits uint64
-	prev   *LRUKKeypair[T]
-	next   *LRUKKeypair[T]
+	prev   *LRUKKeypair[K, V]
+	next   *LRUKKeypair[K, V]
 }
 
-type LRUKCache[T any] struct {
-	cacheq    map[string]*LRUKKeypair[T]
-	historyq  map[string]*LRUKKeypair[T]
+type LRUKCache[K comparable, V any] struct {
+	cacheq    map[K]*LRUKKeypair[K, V]
+	historyq  map[K]*LRUKKeypair[K, V]
 	condition uint64
 	cap       uint64
 	len       atomic.Uint64
-	head      *LRUKKeypair[T]
+	head      *LRUKKeypair[K, V]
 	headlock  sync.Mutex
-	tail      *LRUKKeypair[T]
+	tail      *LRUKKeypair[K, V]
 }
 
-func (lc *LRUKCache[T]) Get(key string) T {
+func (lc *LRUKCache[K, V]) Get(key K) V {
 	n, ok := lc.cacheq[key]
 	if ok {
 		lc.toHeadNode(n)
@@ -37,11 +37,11 @@ func (lc *LRUKCache[T]) Get(key string) T {
 		lc.moveNodeFromHistoryqToCacheq(n)
 	}
 
-	var res T
+	var res V
 	return res
 }
 
-func (lc *LRUKCache[T]) Put(key string, value T) error {
+func (lc *LRUKCache[K, V]) Put(key K, value V) error {
 	n, ok := lc.cacheq[key]
 	if ok {
 		n.Value = value
@@ -51,7 +51,7 @@ func (lc *LRUKCache[T]) Put(key string, value T) error {
 			n.Value = value
 			n.visits++
 		} else {
-			n = &LRUKKeypair[T]{
+			n = &LRUKKeypair[K, V]{
 				Key:    key,
 				Value:  value,
 				visits: 1,
@@ -66,7 +66,7 @@ func (lc *LRUKCache[T]) Put(key string, value T) error {
 	return nil
 }
 
-func (lc *LRUKCache[T]) moveNodeFromHistoryqToCacheq(n *LRUKKeypair[T]) {
+func (lc *LRUKCache[K, V]) moveNodeFromHistoryqToCacheq(n *LRUKKeypair[K, V]) {
 	if n.visits >= lc.condition {
 		// 先从historyquene删除节点
 		lc.deleteHistoryqNode(n)
@@ -83,7 +83,7 @@ func (lc *LRUKCache[T]) moveNodeFromHistoryqToCacheq(n *LRUKKeypair[T]) {
 	}
 }
 
-func (lc *LRUKCache[T]) toHeadNode(n *LRUKKeypair[T]) {
+func (lc *LRUKCache[K, V]) toHeadNode(n *LRUKKeypair[K, V]) {
 	lc.headlock.Lock()
 	defer lc.headlock.Unlock()
 
@@ -108,11 +108,11 @@ func (lc *LRUKCache[T]) toHeadNode(n *LRUKKeypair[T]) {
 	lc.head = n
 }
 
-func (lc *LRUKCache[T]) deleteHistoryqNode(n *LRUKKeypair[T]) {
+func (lc *LRUKCache[K, V]) deleteHistoryqNode(n *LRUKKeypair[K, V]) {
 	delete(lc.historyq, n.Key)
 }
 
-func (lc *LRUKCache[T]) deleteTail() {
+func (lc *LRUKCache[K, V]) deleteTail() {
 	n := lc.tail
 
 	n.prev.next = nil
@@ -122,11 +122,11 @@ func (lc *LRUKCache[T]) deleteTail() {
 	lc.len.Store(lc.len.Load() - 1)
 }
 
-func newLRUKCache[T any](cacheqCap uint64, historyqCap uint64, condition uint64) *LRUKCache[T] {
-	return &LRUKCache[T]{
+func newLRUKCache[K comparable, V any](cacheqCap uint64, historyqCap uint64, condition uint64) *LRUKCache[K, V] {
+	return &LRUKCache[K, V]{
 		cap:       cacheqCap,
 		condition: condition,
-		cacheq:    make(map[string]*LRUKKeypair[T], cacheqCap),
-		historyq:  make(map[string]*LRUKKeypair[T], historyqCap),
+		cacheq:    make(map[K]*LRUKKeypair[K, V], cacheqCap),
+		historyq:  make(map[K]*LRUKKeypair[K, V], historyqCap),
 	}
 }
