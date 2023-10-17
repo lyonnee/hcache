@@ -48,9 +48,9 @@ func TestLRU2_Cache(t *testing.T) {
 }
 
 func BenchmarkLRUKCache(b *testing.B) {
-	cacheqCapacity := uint64(1000)
-	historyqCapacity := uint64(1000)
-	condition := uint64(10)
+	cacheqCapacity := 1000
+	historyqCapacity := 1000
+	condition := 10
 	cache := newLRUKCache[uint64, string](cacheqCapacity, historyqCapacity, condition)
 
 	b.ResetTimer()

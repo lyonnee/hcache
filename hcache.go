@@ -3,14 +3,14 @@ package hcache
 type HCache[K comparable, V any] interface {
 	Get(key K) (V, bool)
 	Put(key K, value V) error
-	Cap() uint64
-	Len() uint64
+	Cap() int
+	Len() int
 }
 
 type Options struct {
-	CacheqCap   uint64
-	HistoryqCap uint64
-	Condition   uint64
+	CacheqCap   int
+	HistoryqCap int
+	Condition   int
 }
 
 func New[K comparable, V any](opts *Options) HCache[K, V] {

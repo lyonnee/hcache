@@ -13,8 +13,8 @@ type Keypair[K comparable, V any] struct {
 
 type LRUCache[K comparable, V any] struct {
 	cacheq sync.Map
-	cap    uint64
-	len    uint64
+	cap    int
+	len    int
 	head   *Keypair[K, V]
 	tail   *Keypair[K, V]
 }
@@ -54,11 +54,11 @@ func (lc *LRUCache[K, V]) Put(key K, value V) error {
 	return nil
 }
 
-func (lc *LRUCache[K, V]) Cap() uint64 {
+func (lc *LRUCache[K, V]) Cap() int {
 	return lc.cap
 }
 
-func (lc *LRUCache[K, V]) Len() uint64 {
+func (lc *LRUCache[K, V]) Len() int {
 	return lc.len
 }
 
@@ -99,7 +99,7 @@ func (lc *LRUCache[K, V]) deleteTail() {
 	lc.cacheq.Delete(n.Key)
 }
 
-func newLRUCache[K comparable, V any](cap uint64) *LRUCache[K, V] {
+func newLRUCache[K comparable, V any](cap int) *LRUCache[K, V] {
 	return &LRUCache[K, V]{
 		cap:    cap,
 		cacheq: sync.Map{},

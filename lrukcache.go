@@ -7,7 +7,7 @@ import (
 type LRUKKeypair[K comparable, V any] struct {
 	Key    K
 	Value  V
-	visits uint64
+	visits int
 	prev   *LRUKKeypair[K, V]
 	next   *LRUKKeypair[K, V]
 }
@@ -15,9 +15,9 @@ type LRUKKeypair[K comparable, V any] struct {
 type LRUKCache[K comparable, V any] struct {
 	cacheq       sync.Map
 	historyq     map[K]*LRUKKeypair[K, V]
-	condition    uint64
-	cap          uint64
-	len          uint64
+	condition    int
+	cap          int
+	len          int
 	head         *LRUKKeypair[K, V]
 	historyqLock sync.RWMutex
 	tail         *LRUKKeypair[K, V]
@@ -93,11 +93,11 @@ func (lc *LRUKCache[K, V]) moveNodeFromHistoryqToCacheq(n *LRUKKeypair[K, V]) {
 	}
 }
 
-func (lc *LRUKCache[K, V]) Cap() uint64 {
+func (lc *LRUKCache[K, V]) Cap() int {
 	return lc.cap
 }
 
-func (lc *LRUKCache[K, V]) Len() uint64 {
+func (lc *LRUKCache[K, V]) Len() int {
 	return lc.len
 }
 
@@ -139,7 +139,7 @@ func (lc *LRUKCache[K, V]) deleteTail() {
 	lc.len--
 }
 
-func newLRUKCache[K comparable, V any](cacheqCap uint64, historyqCap uint64, condition uint64) *LRUKCache[K, V] {
+func newLRUKCache[K comparable, V any](cacheqCap int, historyqCap int, condition int) *LRUKCache[K, V] {
 	return &LRUKCache[K, V]{
 		cap:       cacheqCap,
 		condition: condition,
