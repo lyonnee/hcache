@@ -15,16 +15,20 @@ func TestLRUCache(t *testing.T) {
 	for i := 1; i <= 10; i++ {
 		cache.Put(strconv.FormatInt(int64(i), 10), i)
 	}
-	assert.Equal(t, 10, cache.head.Value)
-	assert.Equal(t, 1, cache.tail.Value)
+	assert.Equal(t, 10, cache.list.Front().Value.(*Keypair[string, int]).Value)
+	assert.Equal(t, 1, cache.list.Back().Value.(*Keypair[string, int]).Value)
 
-	cache.Get("6")
-	assert.Equal(t, 6, cache.head.Value)
+	data, _ := cache.Get("6")
+	assert.Equal(t, data, cache.list.Front().Value.(*Keypair[string, int]).Value)
 
 	cache.Put(strconv.FormatInt(11, 10), 11)
 	cache.Put(strconv.FormatInt(12, 10), 12)
-	assert.Equal(t, 12, cache.head.Value)
-	assert.Equal(t, 3, cache.tail.Value)
+	assert.Equal(t, 12, cache.list.Front().Value.(*Keypair[string, int]).Value)
+	assert.Equal(t, 3, cache.list.Back().Value.(*Keypair[string, int]).Value)
+
+	cache.Put("6", 66)
+	v, _ := cache.Get("6")
+	assert.Equal(t, 66, v)
 }
 
 func BenchmarkLRUCache_Rand(b *testing.B) {

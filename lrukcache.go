@@ -21,6 +21,16 @@ type LRUKCache[K comparable, V any] struct {
 	listLock     sync.Mutex
 }
 
+func newLRUKCache[K comparable, V any](cacheqCap int, historyqCap int, condition int) *LRUKCache[K, V] {
+	return &LRUKCache[K, V]{
+		cap:       cacheqCap,
+		condition: condition,
+		cacheq:    sync.Map{},
+		historyq:  make(map[K]*LRUKKeypair[K, V], historyqCap),
+		list:      list.New().Init(),
+	}
+}
+
 func (lc *LRUKCache[K, V]) Get(key K) (V, bool) {
 	v, ok := lc.cacheq.Load(key)
 	if ok {
@@ -82,31 +92,21 @@ func (lc *LRUKCache[K, V]) Len() int {
 	return lc.list.Len()
 }
 
-func (lc *LRUKCache[K, V]) newKpToHead(n *LRUKKeypair[K, V]) {
-	if n.visits < lc.condition {
+func (lc *LRUKCache[K, V]) newKpToHead(kp *LRUKKeypair[K, V]) {
+	if kp.visits < lc.condition {
 		return
 	}
 	lc.listLock.Lock()
 	if lc.cap == lc.list.Len() {
 		lc.list.Remove(lc.list.Back())
 	}
-	e := lc.list.PushFront(n)
+	e := lc.list.PushFront(kp)
 	lc.listLock.Unlock()
-	lc.cacheq.Store(n.Key, e)
+	lc.cacheq.Store(kp.Key, e)
 }
 
 func (lc *LRUKCache[K, V]) moveElemToHead(e *list.Element) {
 	lc.listLock.Lock()
 	lc.list.MoveToFront(e)
 	lc.listLock.Unlock()
-}
-
-func newLRUKCache[K comparable, V any](cacheqCap int, historyqCap int, condition int) *LRUKCache[K, V] {
-	return &LRUKCache[K, V]{
-		cap:       cacheqCap,
-		condition: condition,
-		cacheq:    sync.Map{},
-		historyq:  make(map[K]*LRUKKeypair[K, V], historyqCap),
-		list:      list.New().Init(),
-	}
 }
