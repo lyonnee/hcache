@@ -1,7 +1,7 @@
 package hcache
 
 type HCache[K comparable, V any] interface {
-	Get(key K) V
+	Get(key K) (V, bool)
 	Put(key K, value V) error
 	Cap() uint64
 	Len() uint64

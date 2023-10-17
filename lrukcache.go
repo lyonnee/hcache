@@ -23,13 +23,13 @@ type LRUKCache[K comparable, V any] struct {
 	tail         *LRUKKeypair[K, V]
 }
 
-func (lc *LRUKCache[K, V]) Get(key K) V {
+func (lc *LRUKCache[K, V]) Get(key K) (V, bool) {
 	v, ok := lc.cacheq.Load(key)
 	var n *LRUKKeypair[K, V]
 	if ok {
 		n = v.(*LRUKKeypair[K, V])
 		lc.toHead(n)
-		return n.Value
+		return n.Value, true
 	}
 
 	lc.historyqLock.RLock()
@@ -38,10 +38,11 @@ func (lc *LRUKCache[K, V]) Get(key K) V {
 	if ok {
 		n.visits++
 		lc.moveNodeFromHistoryqToCacheq(n)
+		return n.Value, true
 	}
 
 	var res V
-	return res
+	return res, false
 }
 
 func (lc *LRUKCache[K, V]) Put(key K, value V) error {

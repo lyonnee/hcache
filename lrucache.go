@@ -19,16 +19,16 @@ type LRUCache[K comparable, V any] struct {
 	tail   *Keypair[K, V]
 }
 
-func (lc *LRUCache[K, V]) Get(key K) V {
+func (lc *LRUCache[K, V]) Get(key K) (V, bool) {
 	v, ok := lc.cacheq.Load(key)
 	if !ok {
 		var res V
-		return res
+		return res, true
 	}
 
 	n := v.(*Keypair[K, V])
 	lc.toHead(n)
-	return n.Value
+	return n.Value, false
 }
 
 func (lc *LRUCache[K, V]) Put(key K, value V) error {
