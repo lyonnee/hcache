@@ -21,12 +21,12 @@ type LRUCache[K comparable, V any] struct {
 
 func (lc *LRUCache[K, V]) Get(key K) V {
 	v, ok := lc.cacheq.Load(key)
-	n := v.(*Keypair[K, V])
 	if !ok {
 		var res V
 		return res
 	}
 
+	n := v.(*Keypair[K, V])
 	lc.toHead(n)
 	return n.Value
 }
@@ -85,13 +85,18 @@ func (lc *LRUCache[K, V]) toHead(n *Keypair[K, V]) {
 }
 
 func (lc *LRUCache[K, V]) deleteTail() {
+	lc.len--
+	if lc.tail == nil {
+		return
+	}
 	n := lc.tail
 
-	n.prev.next = nil
+	if n.prev != nil {
+		n.prev.next = nil
+	}
 	lc.tail = n.prev
 
 	lc.cacheq.Delete(n.Key)
-	lc.len--
 }
 
 func newLRUCache[K comparable, V any](cap uint64) *LRUCache[K, V] {
