@@ -23,12 +23,12 @@ func (lc *LRUCache[K, V]) Get(key K) (V, bool) {
 	v, ok := lc.cacheq.Load(key)
 	if !ok {
 		var res V
-		return res, true
+		return res, false
 	}
 
 	n := v.(*Keypair[K, V])
 	lc.toHead(n)
-	return n.Value, false
+	return n.Value, true
 }
 
 func (lc *LRUCache[K, V]) Put(key K, value V) error {
