@@ -130,13 +130,18 @@ func (lc *LRUKCache[K, V]) deleteHistoryqNode(n *LRUKKeypair[K, V]) {
 }
 
 func (lc *LRUKCache[K, V]) deleteTail() {
+	lc.len--
+	if lc.tail == nil {
+		return
+	}
 	n := lc.tail
 
-	n.prev.next = nil
+	if n.prev != nil {
+		n.prev.next = nil
+	}
 	lc.tail = n.prev
 
 	lc.cacheq.Delete(n.Key)
-	lc.len--
 }
 
 func newLRUKCache[K comparable, V any](cacheqCap uint64, historyqCap uint64, condition uint64) *LRUKCache[K, V] {
