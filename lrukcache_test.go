@@ -1,10 +1,8 @@
 package hcache
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -47,19 +45,55 @@ func TestLRU2_Cache(t *testing.T) {
 	assert.Equal(t, 1, cache.tail.Value)
 }
 
-func BenchmarkLRUKCache(b *testing.B) {
-	cacheqCapacity := uint64(1000)
-	historyqCapacity := uint64(1000)
-	condition := uint64(10)
-	cache := newLRUKCache[uint64, string](cacheqCapacity, historyqCapacity, condition)
+func Benchmark2Q_Rand(b *testing.B) {
+	l := newLRUKCache[int64, int64](1000, 1000, 2)
+
+	trace := make([]int64, b.N*2)
+	for i := 0; i < b.N*2; i++ {
+		trace[i] = getRand(b) % 32768
+	}
 
 	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			key := uint64(time.Now().UnixNano())
-			value := fmt.Sprintf("value-%d", key)
-			cache.Put(key, value)
-			cache.Get(key)
+
+	var hit, miss int
+	for i := 0; i < 2*b.N; i++ {
+		if i%2 == 0 {
+			l.Put(trace[i], trace[i])
+		} else {
+			if _, ok := l.Get(trace[i]); ok {
+				hit++
+			} else {
+				miss++
+			}
 		}
-	})
+	}
+	b.Logf("hit: %d miss: %d ratio: %f", hit, miss, float64(hit)/float64(hit+miss))
+}
+
+func Benchmark2Q_Freq(b *testing.B) {
+	l := newLRUKCache[int64, int64](1000, 1000, 2)
+
+	trace := make([]int64, b.N*2)
+	for i := 0; i < b.N*2; i++ {
+		if i%2 == 0 {
+			trace[i] = getRand(b) % 16384
+		} else {
+			trace[i] = getRand(b) % 32768
+		}
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		l.Put(trace[i], trace[i])
+	}
+	var hit, miss int
+	for i := 0; i < b.N; i++ {
+		if _, ok := l.Get(trace[i]); ok {
+			hit++
+		} else {
+			miss++
+		}
+	}
+	b.Logf("hit: %d miss: %d ratio: %f", hit, miss, float64(hit)/float64(hit+miss))
 }
