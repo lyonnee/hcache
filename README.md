@@ -95,7 +95,7 @@ go get github.com/lyonnee/hcache@latest
 ```
 
 ## Usage & Example
-### LRU(1) cache example
+### LRU(1) 
 ```go
 import "github.com/lyonnee/hcache"
 
@@ -108,7 +108,7 @@ cache.Set("key", "value")
 value := cache.Get("key")
 ```
 
-### LRU-K cache example
+### LRU-K
 ```go
 import "github.com/lyonnee/hcache"
 
