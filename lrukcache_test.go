@@ -1,50 +1,131 @@
 package hcache
 
 import (
-	"strconv"
+	"fmt"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
-func TestLRU1_Cache(t *testing.T) {
-	cache := newLRUKCache[string, int](10, 1, 1)
-	for i := 1; i <= 10; i++ {
-		cache.Put(strconv.FormatInt(int64(i), 10), i)
+func TestLRUCache1(t *testing.T) {
+	cache := newLRUKCache[string, string](5, 5, 1)
+
+	// 添加键值对
+	cache.Put("key1", "value1")
+	cache.Put("key2", "value2")
+	cache.Put("key3", "value3")
+
+	// 获取键值对
+	value, exists := cache.Get("key1")
+	if !exists || value != "value1" {
+		t.Errorf("Expected key1 to exist with value 'value1'")
 	}
-	assert.Equal(t, 10, cache.head.Value)
-	assert.Equal(t, 1, cache.tail.Value)
 
-	cache.Get("6")
-	assert.Equal(t, 6, cache.head.Value)
+	// 测试LRU淘汰
+	cache.Put("key4", "value4")
+	cache.Put("key5", "value5")
+	cache.Put("key6", "value6") // 这将导致"key1"被淘汰
 
-	cache.Put(strconv.FormatInt(11, 10), 11)
-	cache.Put(strconv.FormatInt(12, 10), 12)
-	assert.Equal(t, 12, cache.head.Value)
-	assert.Equal(t, 3, cache.tail.Value)
+	value, exists = cache.Get("key1")
+	if exists {
+		t.Errorf("Expected key1 to be evicted from the cache")
+	}
+
+	// 更新值
+	cache.Put("key3", "new_value3")
+	value, _ = cache.Get("key3")
+	if value != "new_value3" {
+		t.Errorf("Expected key3 to be updated with 'new_value3'")
+	}
+
+	// 测试不存在的键
+	_, exists = cache.Get("non_existent_key")
+	if exists {
+		t.Errorf("Expected non_existent_key not to exist in the cache")
+	}
 }
 
-func TestLRU2_Cache(t *testing.T) {
-	cache := newLRUKCache[string, int](10, 10, 2)
-	for i := 1; i <= 10; i++ {
-		cache.Put(strconv.FormatInt(int64(i), 10), i)
+func TestConcurrentLRU1Cache(t *testing.T) {
+	cache := newLRUKCache[string, string](100, 100, 1)
+
+	numKeys := 100
+	numReaders := 10
+	numWriters := 5
+
+	// 添加一些初始键值对
+	for i := 0; i < numKeys; i++ {
+		cache.Put(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i))
 	}
 
-	for i := 1; i <= 10; i++ {
-		cache.Get(strconv.FormatInt(int64(i), 10))
+	// 启动读取者
+	for i := 0; i < numReaders; i++ {
+		go func() {
+			for j := 0; j < numKeys; j++ {
+				key := fmt.Sprintf("key%d", j)
+				value, exists := cache.Get(key)
+				if !exists {
+					t.Errorf("Reader: Expected key %s to exist in the cache", key)
+				}
+				expectedValue := fmt.Sprintf("value%d", j)
+				if value != expectedValue {
+					t.Errorf("Reader: Expected key %s to have value %s, but got %s", key, expectedValue, value)
+				}
+			}
+		}()
 	}
-	assert.Equal(t, 10, cache.head.Value)
-	assert.Equal(t, 1, cache.tail.Value)
 
-	cache.Get("6")
-	assert.Equal(t, 6, cache.head.Value)
-
-	cache.Put(strconv.FormatInt(11, 10), 11)
-	cache.Put(strconv.FormatInt(12, 10), 12)
-	assert.Equal(t, 6, cache.head.Value)
-	assert.Equal(t, 1, cache.tail.Value)
+	// 启动写入者
+	for i := 0; i < numWriters; i++ {
+		go func() {
+			for j := 0; j < numKeys; j++ {
+				key := fmt.Sprintf("key%d", j)
+				newValue := fmt.Sprintf("new_value%d", j)
+				cache.Put(key, newValue)
+				value, _ := cache.Get(key)
+				if value != newValue {
+					t.Errorf("Writer: Expected key %s to be updated with value %s", key, newValue)
+				}
+			}
+		}()
+	}
 }
 
+func TestLRU2QCache(t *testing.T) {
+	cache := newLRUKCache[string, string](5, 5, 2)
+
+	// 添加键值对
+	cache.Put("key1", "value1")
+	cache.Put("key2", "value2")
+	cache.Put("key3", "value3")
+
+	// 获取键值对
+	value, exists := cache.Get("key1")
+	if !exists || value != "value1" {
+		t.Errorf("Expected key1 to exist with value 'value1'")
+	}
+
+	// 测试LRU淘汰
+	cache.Put("key4", "value4")
+	cache.Put("key5", "value5")
+	cache.Put("key6", "value6") // 这将导致从historyq中的"key1"被淘汰
+
+	// "key1" 仍然应该存在，因为它在2Q队列中
+	value, exists = cache.Get("key1")
+	if !exists || value != "value1" {
+		t.Errorf("Expected key1 to exist with value 'value1'")
+	}
+
+	// 更新值
+	cache.Put("key3", "new_value3")
+	value, _ = cache.Get("key3")
+	if value != "new_value3" {
+		t.Errorf("Expected key3 to be updated with 'new_value3'")
+	}
+
+	// 测试不存在的键
+	_, exists = cache.Get("non_existent_key")
+	if exists {
+		t.Errorf("Expected non_existent_key not to exist in the cache")
+	}
+}
 func Benchmark2Q_Rand(b *testing.B) {
 	l := newLRUKCache[int64, int64](1000, 1000, 2)
 
