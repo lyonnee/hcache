@@ -1,4 +1,4 @@
-# HCache - Happy Cache
+# HCache (Happy Cache)
 
 A high-performance LRU cache library implemented in Go.
 
