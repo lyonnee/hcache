@@ -12,7 +12,8 @@ type Keypair[K comparable, V any] struct {
 }
 
 type LRUCache[K comparable, V any] struct {
-	cacheq sync.Map
+	cacheq map[K]*Keypair[K, V]
+	locker sync.Locker
 	cap    uint64
 	len    uint64
 	head   *Keypair[K, V]
@@ -20,22 +21,26 @@ type LRUCache[K comparable, V any] struct {
 }
 
 func (lc *LRUCache[K, V]) Get(key K) (V, bool) {
-	v, ok := lc.cacheq.Load(key)
+	lc.locker.Lock()
+	defer lc.locker.Unlock()
+
+	v, ok := lc.cacheq[key]
 	if !ok {
 		var res V
 		return res, false
 	}
 
-	n := v.(*Keypair[K, V])
-	lc.toHead(n)
-	return n.Value, true
+	lc.toHead(v)
+	return v.Value, true
 }
 
 func (lc *LRUCache[K, V]) Put(key K, value V) error {
-	v, ok := lc.cacheq.Load(key)
-	var n *Keypair[K, V]
+	lc.locker.Lock()
+	defer lc.locker.Unlock()
+
+	v, ok := lc.cacheq[key]
 	if !ok {
-		n = &Keypair[K, V]{
+		v = &Keypair[K, V]{
 			Key:   key,
 			Value: value,
 		}
@@ -43,14 +48,14 @@ func (lc *LRUCache[K, V]) Put(key K, value V) error {
 		if lc.len == lc.cap {
 			lc.deleteTail()
 		}
-		lc.cacheq.Store(key, n)
+
+		lc.cacheq[key] = v
 		lc.len++
 	} else {
-		n = v.(*Keypair[K, V])
-		n.Value = value
+		v.Value = value
 	}
 
-	lc.toHead(n)
+	lc.toHead(v)
 	return nil
 }
 
@@ -96,12 +101,13 @@ func (lc *LRUCache[K, V]) deleteTail() {
 	}
 	lc.tail = n.prev
 
-	lc.cacheq.Delete(n.Key)
+	delete(lc.cacheq, n.Key)
 }
 
 func newLRUCache[K comparable, V any](cap uint64) *LRUCache[K, V] {
 	return &LRUCache[K, V]{
 		cap:    cap,
-		cacheq: sync.Map{},
+		locker: &sync.Mutex{},
+		cacheq: make(map[K]*Keypair[K, V], cap),
 	}
 }
